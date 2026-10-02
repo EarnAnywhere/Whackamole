@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Whack-a-Mole — UGXGIG</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  :root{
+    --ink:#1A1D15; --paper:#F5F6EE; --paper-raised:#FFFFFF; --line:#D6D9C8;
+    --yellow:#FFC928; --green:#2F7D4F; --green-soft:#E4F0E7; --red:#B23A2E; --red-soft:#F7E7E4;
+    --dirt:#7A5C3E; --mole:#8B5E34; --blue:#2B5F9E; --blue-soft:#E3ECF6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--paper); color:var(--ink); font-family:'IBM Plex Sans',sans-serif;
+       padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+       -webkit-font-smoothing:antialiased;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0;}
+  .wrap{max-width:480px; margin:0 auto; padding:18px;}
+  .top{background:var(--ink); color:var(--paper); padding:14px 18px; display:flex; justify-content:space-between; align-items:center;}
+  .top b{color:var(--yellow);}
+  .hud{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:15px;}
+  .card{background:var(--paper-raised); border:1.5px solid var(--ink); border-radius:12px; padding:20px; margin-bottom:16px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#4A4E3F;}
+  .field input{width:100%; font-size:17px; padding:12px; border:1.5px solid var(--line); border-radius:6px; font-family:inherit;}
+  .btn{display:block; width:100%; text-align:center; font-weight:600; font-size:15px; padding:14px;
+       border-radius:8px; border:2px solid var(--ink); background:var(--yellow); color:var(--ink);
+       cursor:pointer; text-decoration:none;}
+  .btn.green{background:var(--green); border-color:var(--green); color:#fff;}
+  .hint{font-size:13px; color:#4A4E3F; margin-top:8px;}
+  .hidden{display:none;}
+
+  .scoreboard{display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;}
+  .score-pill{background:var(--ink); color:var(--paper); border-radius:30px; padding:10px 18px;
+              font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:20px;}
+  .timer-pill{background:var(--red-soft); color:var(--red); border-radius:30px; padding:10px 18px;
+              font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:20px;}
+
+  .board{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+    background:linear-gradient(180deg,#C9BB8F,#B7A478);
+    border-radius:16px; padding:16px; border:3px solid var(--ink);
+  }
+  .hole{
+    aspect-ratio:1; border-radius:50%;
+    background:radial-gradient(ellipse at 50% 60%, #3a2a18, #5c4327 70%);
+    position:relative; overflow:hidden; cursor:pointer;
+    box-shadow: inset 0 6px 10px rgba(0,0,0,0.5);
+  }
+  .critter{
+    position:absolute; left:50%; bottom:-100%; width:66%; height:66%;
+    transform:translateX(-50%); border-radius:50% 50% 45% 45%;
+    background:var(--mole); transition:bottom 0.12s ease-out;
+    display:flex; align-items:center; justify-content:center; font-size:26px;
+  }
+  .critter.up{ bottom:6%; }
+  .critter.red{ background:var(--red); }
+  .critter.blue{ background:var(--blue); }
+
+  .colorBtn{ opacity:0.5; }
+  .colorBtn.selected{ opacity:1; outline:3px solid var(--ink); outline-offset:2px; }
+
+  .result{text-align:center; padding:10px 0;}
+  .result .big{font-family:'Space Grotesk',sans-serif; font-size:48px; font-weight:700; color:var(--green); margin:10px 0;}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span><b>UGX</b>GIG — Whack-a-Mole</span>
+</div>
+
+<div class="wrap">
+
+  <!-- SCREEN: START -->
+  <div id="screen-start">
+    <div class="card">
+      <h2 style="margin-bottom:6px;">Whack-a-Mole</h2>
+      <p class="hint" style="margin:0 0 4px;">90 seconds. Red and blue moles pop up mixed together — only hit your color. Right color = +10. Wrong color = -5. Gets faster as your score climbs.</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label for="playerName">Your name</label>
+        <input type="text" id="playerName" placeholder="Enter your name">
+      </div>
+      <div class="field">
+        <label>Your color</label>
+        <div style="display:flex; gap:10px;">
+          <button type="button" class="btn colorBtn" data-color="red" style="background:var(--red); border-color:var(--red); color:#fff;">Red</button>
+          <button type="button" class="btn colorBtn" data-color="blue" style="background:var(--blue); border-color:var(--blue); color:#fff;">Blue</button>
+        </div>
+        <p class="hint" id="colorChosenHint"></p>
+      </div>
+      <button class="btn" id="startBtn" disabled>Start game</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: PLAY -->
+  <div id="screen-play" class="hidden">
+    <div class="scoreboard">
+      <div class="score-pill" id="scoreDisplay">0</div>
+      <div class="timer-pill" id="timerDisplay">1:30</div>
+    </div>
+    <div class="board" id="board"></div>
+  </div>
+
+  <!-- SCREEN: RESULT -->
+  <div id="screen-result" class="hidden">
+    <div class="card result">
+      <h2>Time's up!</h2>
+      <div class="big" id="finalScore">0</div>
+      <p class="hint">points</p>
+      <a href="#" class="btn green" id="submitHistoryBtn" target="_blank">Submit to Game History</a>
+      <p class="hint">Then confirm in the WhatsApp group so scores can be compared and the winner paid out.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const GAME_HISTORY_FORM_URL = "PASTE_GOOGLE_FORM_PREFILLED_LINK_HERE"; // swap once the form exists
+const ROUND_SECONDS = 90;
+const HOLE_COUNT = 9;
+const HIT_POINTS = 10;
+const WRONG_COLOR_PENALTY = -5;
+
+let score = 0;
+let timeLeft = ROUND_SECONDS;
+let timerInterval = null;
+let spawnTimeout = null;
+let playerName = "";
+let myColor = null; // "red" or "blue"
+let activeHole = null; // {el, kind, timeout}
+let boardEls = [];
+
+function show(id) {
+  ["screen-start","screen-play","screen-result"].forEach(s =>
+    document.getElementById(s).classList.toggle("hidden", s !== id));
+}
+
+document.querySelectorAll(".colorBtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    myColor = btn.dataset.color;
+    document.querySelectorAll(".colorBtn").forEach(b => b.classList.toggle("selected", b === btn));
+    document.getElementById("colorChosenHint").textContent = `You'll hit ${myColor} moles only.`;
+    document.getElementById("startBtn").disabled = false;
+  });
+});
+
+document.getElementById("startBtn").addEventListener("click", () => {
+  playerName = document.getElementById("playerName").value.trim();
+  if (!playerName) { alert("Enter your name first"); return; }
+  if (!myColor) { alert("Pick your color first"); return; }
+  buildBoard();
+  startGame();
+});
+
+function buildBoard() {
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  boardEls = [];
+  for (let i = 0; i < HOLE_COUNT; i++) {
+    const hole = document.createElement("div");
+    hole.className = "hole";
+    const critter = document.createElement("div");
+    critter.className = "critter";
+    hole.appendChild(critter);
+    hole.addEventListener("click", () => whack(i));
+    board.appendChild(hole);
+    boardEls.push({ hole, critter });
+  }
+}
+
+function startGame() {
+  score = 0;
+  timeLeft = ROUND_SECONDS;
+  updateHud();
+  show("screen-play");
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    updateHud();
+    if (timeLeft <= 0) endGame();
+  }, 1000);
+
+  scheduleSpawn();
+}
+
+function updateHud() {
+  document.getElementById("scoreDisplay").textContent = score;
+  const m = Math.floor(Math.max(timeLeft,0) / 60);
+  const s = Math.max(timeLeft,0) % 60;
+  document.getElementById("timerDisplay").textContent = `${m}:${String(s).padStart(2,"0")}`;
+}
+
+function scheduleSpawn() {
+  // speed scales with score: starts ~900ms gap, gets faster, floors at ~320ms
+  const speed = Math.max(320, 900 - score * 4);
+  spawnTimeout = setTimeout(spawnCritter, speed);
+}
+
+function spawnCritter() {
+  if (timeLeft <= 0) return;
+
+  // clear any previous critter still up
+  if (activeHole) {
+    activeHole.critter.classList.remove("up","red","blue");
+    clearTimeout(activeHole.hideTimeout);
+  }
+
+  const idx = Math.floor(Math.random() * boardEls.length);
+  const { hole, critter } = boardEls[idx];
+  const color = Math.random() < 0.5 ? "red" : "blue";
+
+  critter.classList.remove("red","blue");
+  critter.classList.add(color);
+  critter.textContent = "🐹";
+  critter.classList.add("up");
+  critter.dataset.kind = color;
+  critter.dataset.resolved = "false";
+
+  const upTime = Math.max(500, 950 - score * 3);
+  const hideTimeout = setTimeout(() => {
+    critter.classList.remove("up");
+    activeHole = null;
+    scheduleSpawn();
+  }, upTime);
+
+  activeHole = { hole, critter, hideTimeout };
+}
+
+function whack(i) {
+  const { critter } = boardEls[i];
+  if (!critter.classList.contains("up") || critter.dataset.resolved === "true") return;
+
+  critter.dataset.resolved = "true";
+  const correctColor = critter.dataset.kind === myColor;
+  score = Math.max(0, score + (correctColor ? HIT_POINTS : WRONG_COLOR_PENALTY));
+  updateHud();
+
+  critter.classList.remove("up");
+  if (activeHole) clearTimeout(activeHole.hideTimeout);
+  activeHole = null;
+  scheduleSpawn();
+}
+
+function endGame() {
+  clearInterval(timerInterval);
+  clearTimeout(spawnTimeout);
+  if (activeHole) clearTimeout(activeHole.hideTimeout);
+
+  document.getElementById("finalScore").textContent = score;
+  show("screen-result");
+
+  const link = GAME_HISTORY_FORM_URL
+    .replace("REPLACE_NAME", encodeURIComponent(playerName))
+    .replace("REPLACE_RESULT", encodeURIComponent(String(score)));
+  document.getElementById("submitHistoryBtn").href = link;
+}
+</script>
+
+</body>
+</html>
